@@ -246,7 +246,7 @@ const App = () => {
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center">
-                <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">Step 1: Choose Meat</h2>
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">Choose Meat</h2>
                 <p className="text-slate-400 font-medium">What's on the menu today?</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -324,7 +324,7 @@ const App = () => {
                         {calculation.availableVariants.map(v => (
                           <button type="button" key={v.id} onClick={() => setVariantId(v.id)} className={`relative overflow-hidden group min-h-[44px] py-3 px-2 rounded-2xl border-2 transition-all touch-manipulation ${variantId === v.id ? 'border-amber-600 bg-amber-600 text-white' : 'border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600 active:bg-slate-800'}`}>
                             <span className="relative z-10 font-black uppercase text-xs tracking-widest">{v.label}</span>
-                            {v.color && <div className={`absolute bottom-0 left-0 w-full h-1 ${v.color}`} />}
+                            {v.color && variantId !== v.id && <div className={`absolute bottom-0 left-0 w-full h-1 ${v.color}`} />}
                           </button>
                         ))}
                       </div>
