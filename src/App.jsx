@@ -403,7 +403,7 @@ const App = () => {
         </div>
 
         <footer className="text-center text-slate-800 text-[10px] py-8 md:py-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] uppercase tracking-[0.4em] font-black">
-          Precision Roasting &bull; UK FSA Guidelines &bull; 2024
+          Precision Roasting &bull; UK FSA Guidelines &bull; 2026
         </footer>
       </div>
     </div>
