@@ -497,20 +497,20 @@ const App = () => {
                     
                     {isPlanningMode && (
                       <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                         <div className="flex flex-wrap items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2 px-3 sm:px-4 gap-2">
-                            <span className="text-white text-sm font-bold uppercase tracking-widest shrink-0 flex items-center gap-2">
-                              <Clock className="w-5 h-5 text-white" />
+                         <div className="flex flex-nowrap items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-1.5 px-2 sm:px-3 gap-1.5 min-w-0">
+                            <span className="text-white text-xs sm:text-sm font-bold uppercase tracking-widest shrink-0 flex items-center gap-1.5">
+                              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                               Eat At:
                             </span>
                             
-                            <div className="flex items-center gap-1 sm:gap-2 bg-slate-900/50 rounded-lg p-1 ml-auto">
+                            <div className="flex flex-nowrap items-center gap-0.5 sm:gap-1 bg-slate-900/50 rounded-lg p-0.5 sm:p-1 ml-auto shrink min-w-0">
                               <button 
                                 type="button"
                                 onClick={() => adjustEatTime(-15)}
-                                className="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:bg-slate-700 touch-manipulation"
+                                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:bg-slate-700 touch-manipulation min-h-[44px] min-w-[40px] flex items-center justify-center"
                                 aria-label="Subtract 15 minutes"
                               >
-                                <Minus className="w-5 h-5" />
+                                <Minus className="w-4 h-4 sm:w-5 sm:h-5" />
                               </button>
 
                               <input 
@@ -522,25 +522,25 @@ const App = () => {
                                 aria-label="Eat at time"
                                 tabIndex={-1}
                               />
-                              <span className="text-white text-xl sm:text-2xl font-black text-center w-[7rem] sm:w-32 min-w-[5rem]">
+                              <span className="text-white text-lg sm:text-xl font-black text-center w-14 sm:w-20 min-w-[3.5rem] shrink-0">
                                 {eatAtTime}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => eatAtTimeInputRef.current?.showPicker?.() ?? eatAtTimeInputRef.current?.click()}
-                                className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center text-white hover:text-amber-200 active:opacity-80 touch-manipulation shrink-0"
+                                className="p-2 min-h-[44px] min-w-[40px] flex items-center justify-center text-white hover:text-amber-200 active:opacity-80 touch-manipulation shrink-0"
                                 aria-label="Open time picker"
                               >
-                                <Clock className="w-5 h-5" />
+                                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                               </button>
 
                               <button 
                                 type="button"
                                 onClick={() => adjustEatTime(15)}
-                                className="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:bg-slate-700 touch-manipulation"
+                                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:bg-slate-700 touch-manipulation min-h-[44px] min-w-[40px] flex items-center justify-center"
                                 aria-label="Add 15 minutes"
                               >
-                                <Plus className="w-5 h-5" />
+                                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                               </button>
                             </div>
                          </div>
