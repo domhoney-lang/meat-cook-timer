@@ -213,12 +213,12 @@ const App = () => {
       onClick={onClick}
       className={`flex flex-col items-center justify-center p-4 sm:p-6 min-h-[88px] sm:min-h-0 rounded-3xl border-2 transition-all duration-300 touch-manipulation ${
         isSelected 
-        ? 'border-amber-500 bg-amber-500/10 text-amber-400 ring-1 ring-amber-500 shadow-lg shadow-amber-900/20' 
-        : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 active:bg-slate-800/60'
+        ? 'border-amber-600 bg-amber-600/10 text-amber-200 ring-1 ring-amber-600 shadow-lg shadow-amber-900/20' 
+        : 'border-slate-800 bg-slate-900/40 text-slate-300 hover:border-slate-600 active:bg-slate-800/60'
       }`}
     >
-      {icon && <span className={`mb-2 sm:mb-3 transition-colors ${isSelected ? 'text-amber-500' : 'text-slate-500'}`}>{icon}</span>}
-      <span className="text-xs sm:text-sm font-bold text-center leading-tight uppercase tracking-wider">{label}</span>
+      {icon && <span className={`mb-2 sm:mb-3 transition-colors ${isSelected ? 'text-amber-500' : 'text-slate-400'}`}>{icon}</span>}
+      <span className="text-sm font-bold text-center leading-tight uppercase tracking-wider">{label}</span>
     </button>
   );
 
@@ -229,15 +229,15 @@ const App = () => {
         {/* Header */}
         <div className="flex flex-col items-center gap-6">
           <header className="flex items-center gap-3">
-            <div className="bg-amber-600 p-2 rounded-xl shadow-lg shadow-amber-900/20">
+            <div className="bg-amber-700 p-2 rounded-xl shadow-lg shadow-amber-900/30">
               <ChefHat className="text-white w-6 h-6" />
             </div>
-            <h1 className="text-lg sm:text-xl font-black tracking-tighter text-white uppercase italic">Dom's Roast Pro <span className="text-amber-500"></span></h1>
+            <h1 className="text-lg sm:text-xl font-black tracking-tighter text-white uppercase italic">Dom's Roast Pro</h1>
           </header>
 
           <div className="flex items-center gap-2 w-full max-w-xs">
             {[1, 2, 3].map((step) => (
-              <div key={step} className={`h-1.5 rounded-full transition-all duration-500 flex-1 ${currentStep >= step ? 'bg-amber-500' : 'bg-slate-800'}`} />
+              <div key={step} className={`h-1.5 rounded-full transition-all duration-500 flex-1 ${currentStep >= step ? 'bg-amber-600' : 'bg-slate-800'}`} />
             ))}
           </div>
         </div>
@@ -247,7 +247,7 @@ const App = () => {
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center">
                 <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">Step 1: Choose Meat</h2>
-                <p className="text-slate-500 font-medium">What's on the menu today?</p>
+                <p className="text-slate-400 font-medium">What's on the menu today?</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {Object.entries(MEAT_TYPES).map(([key, data]) => (
@@ -260,15 +260,15 @@ const App = () => {
           {currentStep === 2 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="text-center">
-                <button type="button" onClick={() => setCurrentStep(1)} className="inline-flex items-center gap-1 text-amber-500 text-xs font-bold uppercase tracking-widest mb-6 py-2.5 -my-2 min-h-[44px] justify-center hover:opacity-75 active:opacity-90 transition-opacity touch-manipulation">
+                <button type="button" onClick={() => setCurrentStep(1)} className="inline-flex items-center gap-1 text-amber-400 text-sm font-bold uppercase tracking-widest mb-6 py-2.5 -my-2 min-h-[44px] justify-center hover:opacity-90 active:opacity-100 transition-opacity touch-manipulation">
                   <ChevronLeft className="w-4 h-4" /> Change Meat
                 </button>
                 <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">{meatData.name} Selection</h2>
-                <p className="text-slate-500 font-medium">Select the specific cut</p>
+                <p className="text-slate-400 font-medium">Select the specific cut</p>
               </div>
               <div className="max-w-md mx-auto space-y-3">
                 {Object.entries(meatData.cuts).map(([key, cut]) => (
-                  <button type="button" key={key} onClick={() => handleCutSelect(key)} className="flex items-center justify-between px-6 py-4 min-h-[52px] rounded-2xl border-2 border-slate-800 bg-slate-900/40 text-slate-300 hover:border-amber-500 hover:text-amber-400 active:bg-slate-800/60 transition-all w-full font-bold text-left touch-manipulation">
+                  <button type="button" key={key} onClick={() => handleCutSelect(key)} className="flex items-center justify-between px-6 py-4 min-h-[52px] rounded-2xl border-2 border-slate-800 bg-slate-900/40 text-slate-200 text-sm font-bold hover:border-amber-600 hover:text-amber-300 active:bg-slate-800/60 transition-all w-full text-left touch-manipulation">
                     <span>{cut.label}</span>
                     <ChevronRight className="w-5 h-5 opacity-30" />
                   </button>
@@ -281,10 +281,10 @@ const App = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in zoom-in-95 duration-500">
               <div className="lg:col-span-7 space-y-6">
                 <div className="flex items-center justify-between gap-2">
-                  <button type="button" onClick={() => setCurrentStep(meatData.hasCuts ? 2 : 1)} className="inline-flex items-center gap-1 text-amber-500 text-xs font-bold uppercase tracking-widest py-2.5 min-h-[44px] hover:opacity-75 active:opacity-90 transition-opacity touch-manipulation">
+                  <button type="button" onClick={() => setCurrentStep(meatData.hasCuts ? 2 : 1)} className="inline-flex items-center gap-1 text-amber-400 text-sm font-bold uppercase tracking-widest py-2.5 min-h-[44px] hover:opacity-90 active:opacity-100 transition-opacity touch-manipulation">
                     <ChevronLeft className="w-4 h-4 shrink-0" /> Go Back
                   </button>
-                  <button type="button" onClick={() => setCurrentStep(1)} className="inline-flex items-center gap-1 text-slate-500 text-xs font-bold uppercase tracking-widest py-2.5 min-h-[44px] hover:text-white active:text-slate-300 transition-colors touch-manipulation">
+                  <button type="button" onClick={() => setCurrentStep(1)} className="inline-flex items-center gap-1 text-slate-400 text-sm font-bold uppercase tracking-widest py-2.5 min-h-[44px] hover:text-white active:text-slate-200 transition-colors touch-manipulation">
                     <RotateCcw className="w-3.5 h-3.5 shrink-0" /> Start Over
                   </button>
                 </div>
@@ -292,38 +292,38 @@ const App = () => {
                 <div className="bg-slate-900 rounded-3xl p-5 sm:p-6 md:p-8 border border-slate-800 shadow-xl space-y-8 md:space-y-10">
                   <div className="flex flex-wrap gap-3 sm:gap-4 items-center justify-between border-b border-slate-800 pb-5 md:pb-6">
                     <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
-                      <button type="button" onClick={() => setIsImperial(false)} className={`min-h-[44px] px-4 py-2.5 rounded-lg text-xs font-black uppercase transition-all touch-manipulation ${!isImperial ? 'bg-amber-600 text-white' : 'text-slate-500 hover:text-slate-300 active:bg-slate-800'}`}>KG</button>
-                      <button type="button" onClick={() => setIsImperial(true)} className={`min-h-[44px] px-4 py-2.5 rounded-lg text-xs font-black uppercase transition-all touch-manipulation ${isImperial ? 'bg-amber-600 text-white' : 'text-slate-500 hover:text-slate-300 active:bg-slate-800'}`}>LBS</button>
+                      <button type="button" onClick={() => setIsImperial(false)} className={`min-h-[44px] px-4 py-2.5 rounded-lg text-sm font-black uppercase transition-all touch-manipulation ${!isImperial ? 'bg-amber-700 text-white' : 'text-slate-400 hover:text-slate-200 active:bg-slate-800'}`}>KG</button>
+                      <button type="button" onClick={() => setIsImperial(true)} className={`min-h-[44px] px-4 py-2.5 rounded-lg text-sm font-black uppercase transition-all touch-manipulation ${isImperial ? 'bg-amber-700 text-white' : 'text-slate-400 hover:text-slate-200 active:bg-slate-800'}`}>LBS</button>
                     </div>
                     
                     <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
-                      <button type="button" onClick={() => setIsFanOven(false)} className={`min-h-[44px] px-3 py-2.5 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-2 touch-manipulation ${!isFanOven ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300 active:bg-slate-800'}`}>
-                        <Timer className="w-3 h-3 shrink-0" /> Conv
+                      <button type="button" onClick={() => setIsFanOven(false)} className={`min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-black uppercase transition-all flex items-center gap-2 touch-manipulation ${!isFanOven ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-slate-200 active:bg-slate-800'}`}>
+                        <Timer className="w-3.5 h-3.5 shrink-0" /> Conv
                       </button>
-                      <button type="button" onClick={() => setIsFanOven(true)} className={`min-h-[44px] px-3 py-2.5 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-2 touch-manipulation ${isFanOven ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300 active:bg-slate-800'}`}>
-                        <Wind className="w-3 h-3 shrink-0" /> Fan
+                      <button type="button" onClick={() => setIsFanOven(true)} className={`min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-black uppercase transition-all flex items-center gap-2 touch-manipulation ${isFanOven ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-slate-200 active:bg-slate-800'}`}>
+                        <Wind className="w-3.5 h-3.5 shrink-0" /> Fan
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-5 md:space-y-6">
                     <div className="flex flex-wrap justify-between items-end gap-3">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Weight of Roast</label>
+                      <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Weight of Roast</label>
                       <div className="flex items-center gap-2">
-                        <input type="number" step="0.1" min={0.5} max={10} value={weight} onChange={(e) => setWeight(Math.max(0, parseFloat(e.target.value) || 0))} className="w-24 p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-center font-black text-amber-500 text-xl sm:text-2xl focus:outline-none focus:border-amber-500 touch-manipulation" aria-label="Weight" />
-                        <span className="font-bold text-slate-500 text-sm uppercase">{isImperial ? 'lbs' : 'kg'}</span>
+                        <input type="number" step="0.1" min={0.5} max={10} value={weight} onChange={(e) => setWeight(Math.max(0, parseFloat(e.target.value) || 0))} className="w-24 p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-center font-black text-amber-400 text-xl sm:text-2xl focus:outline-none focus:border-amber-600 touch-manipulation" aria-label="Weight" />
+                        <span className="font-bold text-slate-400 text-sm uppercase">{isImperial ? 'lbs' : 'kg'}</span>
                       </div>
                     </div>
-                    <input type="range" min="0.5" max="10" step="0.1" value={weight} onChange={(e) => setWeight(parseFloat(e.target.value))} className="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-600 touch-manipulation" aria-label="Weight slider" />
+                    <input type="range" min="0.5" max="10" step="0.1" value={weight} onChange={(e) => setWeight(parseFloat(e.target.value))} className="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-700 touch-manipulation" aria-label="Weight slider" />
                   </div>
 
                   {calculation.availableVariants.length > 1 && (
                     <div className="space-y-3 md:space-y-4">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{calculation.variantLabel}</label>
+                      <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">{calculation.variantLabel}</label>
                       <div className="grid grid-cols-3 gap-2 sm:gap-3">
                         {calculation.availableVariants.map(v => (
-                          <button type="button" key={v.id} onClick={() => setVariantId(v.id)} className={`relative overflow-hidden group min-h-[44px] py-3 px-2 rounded-2xl border-2 transition-all touch-manipulation ${variantId === v.id ? 'border-amber-500 bg-amber-500 text-black' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 active:bg-slate-800'}`}>
-                            <span className="relative z-10 font-black uppercase text-[10px] sm:text-xs tracking-widest">{v.label}</span>
+                          <button type="button" key={v.id} onClick={() => setVariantId(v.id)} className={`relative overflow-hidden group min-h-[44px] py-3 px-2 rounded-2xl border-2 transition-all touch-manipulation ${variantId === v.id ? 'border-amber-600 bg-amber-600 text-white' : 'border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600 active:bg-slate-800'}`}>
+                            <span className="relative z-10 font-black uppercase text-xs tracking-widest">{v.label}</span>
                             {v.color && <div className={`absolute bottom-0 left-0 w-full h-1 ${v.color}`} />}
                           </button>
                         ))}
@@ -334,11 +334,11 @@ const App = () => {
               </div>
 
               <div className="lg:col-span-5 space-y-4">
-                <div className="bg-amber-600 text-white rounded-3xl p-5 sm:p-6 md:p-7 shadow-2xl shadow-amber-950/40 flex flex-col gap-5 md:gap-6 relative overflow-hidden ring-4 ring-amber-500/20">
+                <div className="bg-amber-700 text-white rounded-3xl p-5 sm:p-6 md:p-7 shadow-2xl shadow-amber-950/40 flex flex-col gap-5 md:gap-6 relative overflow-hidden ring-4 ring-amber-600/30">
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="w-4 h-4 text-amber-100" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-100">Roasting Time</span>
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-amber-100">Roasting Time</span>
                     </div>
                     <div className="text-5xl sm:text-6xl font-black flex items-baseline gap-1 mb-5 md:mb-6">
                       {calculation.hours > 0 && <>{calculation.hours}<span className="text-xl font-medium opacity-60">h</span></>}
@@ -349,7 +349,7 @@ const App = () => {
                       <div className="bg-black/15 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center gap-4">
                         <Thermometer className="w-6 h-6 text-amber-100" />
                         <div>
-                          <p className="text-[10px] font-bold uppercase opacity-50 mb-0.5 tracking-widest">Target Internal</p>
+                          <p className="text-xs font-bold uppercase opacity-90 mb-0.5 tracking-widest">Target Internal</p>
                           <p className="text-2xl font-black">{calculation.internalTemp}°C</p>
                         </div>
                       </div>
@@ -357,8 +357,8 @@ const App = () => {
                       <div className="bg-black/15 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center gap-4">
                         <Scale className="w-6 h-6 text-amber-100" />
                         <div>
-                          <p className="text-[10px] font-bold uppercase opacity-50 mb-0.5 tracking-widest">Oven Temp</p>
-                          <p className="text-2xl font-black">{isFanOven ? '160' : '180'}°C <span className="text-xs opacity-50 font-bold">{isFanOven ? 'Fan' : 'Conv'}</span></p>
+                          <p className="text-xs font-bold uppercase opacity-90 mb-0.5 tracking-widest">Oven Temp</p>
+                          <p className="text-2xl font-black">{isFanOven ? '160' : '180'}°C <span className="text-xs opacity-80 font-bold">{isFanOven ? 'Fan' : 'Conv'}</span></p>
                         </div>
                       </div>
                     </div>
@@ -367,7 +367,7 @@ const App = () => {
                   <div className="relative z-10 pt-4 border-t border-white/20">
                     <div className="flex gap-3">
                       <Info className="w-4 h-4 shrink-0 opacity-80" />
-                      <p className="text-[11px] font-medium leading-tight opacity-95">
+                      <p className="text-sm font-medium leading-tight opacity-95">
                         {calculation.safetyNote} <span className="font-black block mt-1">Resting 20m is vital.</span>
                       </p>
                     </div>
@@ -376,24 +376,24 @@ const App = () => {
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
-                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
+                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
                      <Timer className="w-3.5 h-3.5" /> Recommended Schedule
                    </h4>
                    <div className="space-y-4 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-slate-800">
                       <div className="relative pl-7">
-                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-slate-800 border-4 border-slate-950" />
-                        <p className="text-[10px] font-black text-slate-500 uppercase">Step 1: Prep</p>
-                        <p className="text-xs text-slate-300 font-bold">Remove from fridge 30m before cooking.</p>
+                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-slate-700 border-4 border-slate-950" />
+                        <p className="text-xs font-black text-slate-400 uppercase">Step 1: Prep</p>
+                        <p className="text-sm text-slate-300 font-bold">Remove from fridge 30m before cooking.</p>
                       </div>
                       <div className="relative pl-7">
-                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-600/50 border-4 border-slate-950" />
-                        <p className="text-[10px] font-black text-amber-500 uppercase">Step 2: Oven</p>
-                        <p className="text-xs text-slate-300 font-bold">Preheat to {isFanOven ? '160' : '180'}°C.</p>
+                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-700/60 border-4 border-slate-950" />
+                        <p className="text-xs font-black text-amber-400 uppercase">Step 2: Oven</p>
+                        <p className="text-sm text-slate-300 font-bold">Preheat to {isFanOven ? '160' : '180'}°C.</p>
                       </div>
                       <div className="relative pl-7">
-                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-600 border-4 border-slate-950" />
-                        <p className="text-[10px] font-black text-amber-500 uppercase">Step 3: Ready At</p>
-                        <p className="text-xs text-white font-black">{calculation.readyAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-700 border-4 border-slate-950" />
+                        <p className="text-xs font-black text-amber-400 uppercase">Step 3: Ready At</p>
+                        <p className="text-sm text-white font-black">{calculation.readyAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                       </div>
                    </div>
                 </div>
@@ -402,7 +402,7 @@ const App = () => {
           )}
         </div>
 
-        <footer className="text-center text-slate-800 text-[10px] py-8 md:py-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] uppercase tracking-[0.4em] font-black">
+        <footer className="text-center text-slate-600 text-xs py-8 md:py-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] uppercase tracking-[0.4em] font-black">
           Precision Roasting &bull; UK FSA Guidelines &bull; 2026
         </footer>
       </div>
