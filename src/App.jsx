@@ -231,7 +231,7 @@ const App = () => {
             <div className="bg-amber-600 p-2 rounded-xl shadow-lg shadow-amber-900/20">
               <ChefHat className="text-white w-6 h-6" />
             </div>
-            <h1 className="text-xl font-black tracking-tighter text-white uppercase italic">Roast Pro <span className="text-amber-500">v2</span></h1>
+            <h1 className="text-xl font-black tracking-tighter text-white uppercase italic">Dom's Meat Cook Timer<span className="text-amber-500">v2</span></h1>
           </header>
 
           <div className="flex items-center gap-2 w-full max-w-xs">
