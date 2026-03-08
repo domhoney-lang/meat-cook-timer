@@ -524,6 +524,9 @@ const App = () => {
                                 <Plus className="w-5 h-5" />
                               </button>
                             </div>
+                            <span className="shrink-0 text-white" aria-hidden="true">
+                              <Clock className="w-5 h-5" />
+                            </span>
                          </div>
                       </div>
                     )}
