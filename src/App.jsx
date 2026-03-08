@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { ChefHat, Timer, Thermometer, Info, Beef, Drumstick, Ham, Clock, ChevronLeft, ChevronRight, RotateCcw, Scale, Wind } from 'lucide-react';
+import { ChefHat, Timer, Thermometer, Info, Beef, Drumstick, Ham, Clock, ChevronLeft, ChevronRight, RotateCcw, Scale, Wind, Plus, Minus } from 'lucide-react';
 
 // UK/EU Standard Meat Data with specific cuts and timing constants
 const MEAT_TYPES = {
@@ -152,6 +152,15 @@ const App = () => {
   const [weight, setWeight] = useState(1.5);
   const [isImperial, setIsImperial] = useState(false);
   const [isFanOven, setIsFanOven] = useState(true);
+  const [isPlanningMode, setIsPlanningMode] = useState(false);
+  const [eatAtTime, setEatAtTime] = useState(() => {
+    const d = new Date();
+    d.setHours(d.getHours() + 2);
+    const minutes = d.getMinutes();
+    const roundedMinutes = Math.ceil(minutes / 15) * 15;
+    d.setMinutes(roundedMinutes);
+    return d.toTimeString().slice(0, 5);
+  });
 
   const meatData = MEAT_TYPES[selectedType];
   const weightInKg = isImperial ? weight * 0.453592 : weight;
@@ -176,6 +185,13 @@ const App = () => {
     setCurrentStep(3);
   };
 
+  const adjustEatTime = (minutes) => {
+    const [h, m] = eatAtTime.split(':').map(Number);
+    const date = new Date();
+    date.setHours(h, m + minutes);
+    setEatAtTime(date.toTimeString().slice(0, 5));
+  };
+
   const calculation = useMemo(() => {
     let variant;
     if (meatData.hasCuts) {
@@ -186,21 +202,42 @@ const App = () => {
     }
     
     const totalMinutes = Math.round((weightInKg * variant.minsPerKg) + variant.extraMins);
+    const restingMinutes = 20;
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
 
     const now = new Date();
-    const readyAt = new Date(now.getTime() + totalMinutes * 60000);
-    const fridgeOut = new Date(now.getTime() - 30 * 60000);
+    let startAt, ovenOutAt, readyAt;
+
+    if (isPlanningMode) {
+      const [h, m] = eatAtTime.split(':').map(Number);
+      readyAt = new Date();
+      readyAt.setHours(h, m, 0, 0);
+      if (readyAt < now) {
+        // If time passed, assume tomorrow for logical planning
+        readyAt.setDate(readyAt.getDate() + 1);
+      }
+      ovenOutAt = new Date(readyAt.getTime() - restingMinutes * 60000);
+      startAt = new Date(ovenOutAt.getTime() - totalMinutes * 60000);
+    } else {
+      startAt = now;
+      ovenOutAt = new Date(now.getTime() + totalMinutes * 60000);
+      readyAt = new Date(ovenOutAt.getTime() + restingMinutes * 60000);
+    }
+
+    const fridgeOut = new Date(startAt.getTime() - 30 * 60000);
 
     return {
       totalMinutes,
+      restingMinutes,
       hours,
       mins,
       internalTemp: variant.internalTemp,
       safetyNote: meatData.safetyNote,
       variantLabel: meatData.hasCuts ? (['lamb', 'beef'].includes(selectedType) ? 'Doneness' : 'Style') : meatData.variantLabel,
       availableVariants: meatData.hasCuts ? meatData.cuts[selectedCut].variants : meatData.variants,
+      startAt,
+      ovenOutAt,
       readyAt,
       fridgeOut,
       activeVariant: variant
@@ -306,6 +343,48 @@ const App = () => {
                     </div>
                   </div>
 
+                  <div className="space-y-4">
+                    <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                      <button type="button" onClick={() => setIsPlanningMode(false)} className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold uppercase transition-all ${!isPlanningMode ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Start Now</button>
+                      <button type="button" onClick={() => setIsPlanningMode(true)} className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold uppercase transition-all ${isPlanningMode ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Plan Meal</button>
+                    </div>
+                    
+                    {isPlanningMode && (
+                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                         <div className="flex flex-wrap items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2 px-3 sm:px-4 gap-2">
+                            <span className="text-slate-400 text-sm font-bold uppercase tracking-widest shrink-0">Eat At:</span>
+                            
+                            <div className="flex items-center gap-1 sm:gap-2 bg-slate-900/50 rounded-lg p-1 ml-auto">
+                              <button 
+                                type="button"
+                                onClick={() => adjustEatTime(-15)}
+                                className="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:bg-slate-700 touch-manipulation"
+                                aria-label="Subtract 15 minutes"
+                              >
+                                <Minus className="w-5 h-5" />
+                              </button>
+
+                              <input 
+                                type="time" 
+                                value={eatAtTime} 
+                                onChange={(e) => setEatAtTime(e.target.value)}
+                                className="bg-transparent text-white text-xl sm:text-2xl font-black focus:outline-none text-center appearance-none w-[5.5rem] sm:w-28 border-0 p-0"
+                              />
+
+                              <button 
+                                type="button"
+                                onClick={() => adjustEatTime(15)}
+                                className="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:bg-slate-700 touch-manipulation"
+                                aria-label="Add 15 minutes"
+                              >
+                                <Plus className="w-5 h-5" />
+                              </button>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-5 md:space-y-6">
                     <div className="flex flex-wrap justify-between items-end gap-3">
                       <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Weight of Roast</label>
@@ -383,16 +462,27 @@ const App = () => {
                       <div className="relative pl-7">
                         <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-slate-700 border-4 border-slate-950" />
                         <p className="text-xs font-black text-slate-400 uppercase">Step 1: Prep</p>
-                        <p className="text-sm text-slate-300 font-bold">Remove from fridge 30m before cooking.</p>
+                        <p className="text-sm text-slate-300 font-bold">
+                          {calculation.fridgeOut.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &bull; Remove from fridge
+                        </p>
                       </div>
                       <div className="relative pl-7">
                         <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-700/60 border-4 border-slate-950" />
-                        <p className="text-xs font-black text-amber-400 uppercase">Step 2: Oven</p>
-                        <p className="text-sm text-slate-300 font-bold">Preheat to {isFanOven ? '160' : '180'}°C.</p>
+                        <p className="text-xs font-black text-amber-400 uppercase">Step 2: Oven In</p>
+                        <p className="text-sm text-slate-300 font-bold">
+                          {calculation.startAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &bull; Preheat to {isFanOven ? '160' : '180'}°C
+                        </p>
                       </div>
                       <div className="relative pl-7">
                         <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-700 border-4 border-slate-950" />
-                        <p className="text-xs font-black text-amber-400 uppercase">Step 3: Ready At</p>
+                        <p className="text-xs font-black text-amber-400 uppercase">Step 3: Rest</p>
+                        <p className="text-sm text-slate-300 font-bold">
+                          {calculation.ovenOutAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &bull; Foil & towels ({calculation.restingMinutes}m)
+                        </p>
+                      </div>
+                      <div className="relative pl-7">
+                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-950" />
+                        <p className="text-xs font-black text-white uppercase">Step 4: Serve</p>
                         <p className="text-sm text-white font-black">{calculation.readyAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                       </div>
                    </div>
