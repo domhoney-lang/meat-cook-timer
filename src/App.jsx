@@ -383,7 +383,7 @@ const App = () => {
               <ChefHat className="text-white w-6 h-6" />
             </div>
             <div className="text-left">
-              <h1 className={`font-black tracking-tighter text-white uppercase italic transition-all ${currentStep > 1 ? 'text-xs text-slate-400' : 'text-lg sm:text-xl'}`}>Dom's Roast Pro</h1>
+              <h1 className={`font-black tracking-tighter text-white uppercase italic transition-all ${currentStep > 1 ? 'text-xs text-slate-400' : 'text-lg sm:text-xl'}`}>My Roast Pro</h1>
               {currentStep > 1 && (
                 <div className="flex flex-wrap items-baseline gap-x-2 animate-in fade-in slide-in-from-left-2">
                   <span className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight leading-none">{meatData.name}</span>
@@ -627,8 +627,10 @@ const App = () => {
                         // Step is "past" if its end has passed; last step (Serve) has no endTime so use step.time
                         const stepEnd = step.endTime ?? step.time;
                         const isPast = currentTime >= stepEnd;
-                        // Red when whole plan is overdue (eat-at passed) OR this step's time is earlier than now
-                        const isStepOverdue = isPlanOverdue || isPast;
+                        // In Plan Meal: red if this step's recommended time is before now
+                        const stepRecommendedBeforeNow = isPlanningMode && currentTime > step.time;
+                        // Red when whole plan overdue, or step ended, or (plan mode) step's scheduled time is before now
+                        const isStepOverdue = isPlanOverdue || isPast || stepRecommendedBeforeNow;
                         const isCurrent = !isPlanningMode && !isPast && currentTime >= step.time;
                         const isFuture = !isPast && !isCurrent;
                         
