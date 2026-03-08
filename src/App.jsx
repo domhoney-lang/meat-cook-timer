@@ -268,7 +268,7 @@ const App = () => {
     const mins = totalMinutes % 60;
 
     const now = new Date();
-    let startAt, ovenOutAt, readyAt, fridgeOut;
+    let startAt, ovenOutAt, readyAt, fridgeOut, ovenOnAt;
 
     if (isPlanningMode) {
       const [h, m] = eatAtTime.split(':').map(Number);
@@ -280,9 +280,11 @@ const App = () => {
       }
       ovenOutAt = new Date(readyAt.getTime() - restingMinutes * 60000);
       startAt = new Date(ovenOutAt.getTime() - totalMinutes * 60000);
+      ovenOnAt = new Date(startAt.getTime() - 10 * 60000); // 10 mins before cooking starts
       fridgeOut = new Date(startAt.getTime() - 30 * 60000);
     } else {
       fridgeOut = now;
+      ovenOnAt = new Date(now.getTime() + 20 * 60000); // 20m after fridge out (10m before cooking)
       startAt = new Date(now.getTime() + 30 * 60000);
       ovenOutAt = new Date(startAt.getTime() + totalMinutes * 60000);
       readyAt = new Date(ovenOutAt.getTime() + restingMinutes * 60000);
@@ -298,6 +300,7 @@ const App = () => {
       variantLabel: meatData.hasCuts ? (['lamb', 'beef'].includes(selectedType) ? 'Doneness' : 'Style') : meatData.variantLabel,
       availableVariants: meatData.hasCuts ? meatData.cuts[selectedCut].variants : meatData.variants,
       startAt,
+      ovenOnAt,
       ovenOutAt,
       readyAt,
       fridgeOut,
@@ -612,29 +615,36 @@ const App = () => {
                       {[
                         { 
                           time: calculation.fridgeOut, 
-                          endTime: calculation.startAt,
+                          endTime: calculation.ovenOnAt,
                           label: 'Step 1: Prep', 
                           detail: 'Remove from fridge',
                           isLast: false 
                         },
                         { 
+                          time: calculation.ovenOnAt, 
+                          endTime: calculation.startAt,
+                          label: 'Step 2: Turn On Oven', 
+                          detail: `Preheat to ${isFanOven ? '180' : '200'}°C`,
+                          isLast: false 
+                        },
+                        { 
                           time: calculation.startAt, 
                           endTime: calculation.ovenOutAt,
-                          label: 'Step 2: Oven In', 
-                          detail: `Preheat to ${isFanOven ? '180' : '200'}°C`,
+                          label: 'Step 3: Meat In', 
+                          detail: `Roast for ${calculation.hours > 0 ? calculation.hours + 'h ' : ''}${calculation.mins}m`,
                           isLast: false 
                         },
                         { 
                           time: calculation.ovenOutAt, 
                           endTime: calculation.readyAt,
-                          label: 'Step 3: Rest', 
+                          label: 'Step 4: Rest', 
                           detail: `Foil & towels (${calculation.restingMinutes}m)`,
                           isLast: false 
                         },
                         { 
                           time: calculation.readyAt, 
                           endTime: null, // End of timeline
-                          label: 'Step 4: Serve', 
+                          label: 'Step 5: Serve', 
                           detail: '', // No detail text needed or different style
                           isLast: true 
                         }
