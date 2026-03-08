@@ -1,17 +1,15 @@
 /**
- * App Name: Meat Cook Timer
- * Description: Step-by-step roast timer for UK/EU meats with cut selection, weight (kg/lbs),
- *   fan/conventional oven, target internal temp, and a recommended schedule (UK FSA-style).
+ * Meat Cook Timer / Dom's Roast Pro
+ *
  * Changelog:
- *   - Multi-step flow: choose meat → cut (where applicable) → time & options
- *   - Fan / conventional oven toggle with suggested temps (160°C fan, 180°C conv)
- *   - Kg and lbs weight input with live roasting time calculation
- *   - Recommended schedule (remove from fridge 30m before, preheat, ready-at time)
- *   - Safety notes and resting reminder per meat type
+ *   - Start Now vs Plan Meal (eat-at time) with schedule and overdue (red) state
+ *   - Serve Time card in Roasting Time section (Start Now); Recommended Schedule step highlighting
+ *   - Chef's Tip (Gemini API), sticky header with back/start over, fan oven 10% time reduction
+ *   - Meat/cut/doneness selection, kg/lbs, fan/conventional (180°C / 200°C), 20 min rest, UK FSA-style timings
  */
 
-import React, { useState, useMemo } from 'react';
-import { ChefHat, Timer, Thermometer, Info, Beef, Drumstick, Ham, Clock, ChevronLeft, ChevronRight, RotateCcw, Scale, Wind, Plus, Minus } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChefHat, Timer, Thermometer, Info, Beef, Drumstick, Ham, Clock, ChevronLeft, ChevronRight, RotateCcw, Scale, Wind, Plus, Minus, Sparkles } from 'lucide-react';
 
 // UK/EU Standard Meat Data with specific cuts and timing constants
 const MEAT_TYPES = {
@@ -36,7 +34,7 @@ const MEAT_TYPES = {
         variants: [
           { id: 'rare', label: 'Rare', minsPerKg: 40, extraMins: 20, internalTemp: 52, color: 'bg-red-900' },
           { id: 'medium', label: 'Medium', minsPerKg: 50, extraMins: 25, internalTemp: 60, color: 'bg-pink-700' },
-          { id: 'well', label: 'Well Done', minsPerKg: 60, extraMins: 30, internalTemp: 70, color: 'bg-stone-600' },
+          { id: 'well', label: 'Well Done', minsPerKg: 60, extraMins: 30, internalTemp: 71, color: 'bg-stone-600' },
         ]
       },
       rib: {
@@ -44,7 +42,7 @@ const MEAT_TYPES = {
         variants: [
           { id: 'rare', label: 'Rare', minsPerKg: 30, extraMins: 20, internalTemp: 52, color: 'bg-red-900' },
           { id: 'medium', label: 'Medium', minsPerKg: 40, extraMins: 25, internalTemp: 60, color: 'bg-pink-700' },
-          { id: 'well', label: 'Well Done', minsPerKg: 50, extraMins: 30, internalTemp: 70, color: 'bg-stone-600' },
+          { id: 'well', label: 'Well Done', minsPerKg: 50, extraMins: 30, internalTemp: 71, color: 'bg-stone-600' },
         ]
       },
       fillet: {
@@ -52,7 +50,7 @@ const MEAT_TYPES = {
         variants: [
           { id: 'rare', label: 'Rare', minsPerKg: 20, extraMins: 15, internalTemp: 52, color: 'bg-red-900' },
           { id: 'medium', label: 'Medium', minsPerKg: 30, extraMins: 15, internalTemp: 60, color: 'bg-pink-700' },
-          { id: 'well', label: 'Well Done', minsPerKg: 40, extraMins: 15, internalTemp: 70, color: 'bg-stone-600' },
+          { id: 'well', label: 'Well Done', minsPerKg: 40, extraMins: 15, internalTemp: 71, color: 'bg-stone-600' },
         ]
       }
     },
@@ -91,7 +89,7 @@ const MEAT_TYPES = {
         label: 'Leg of Lamb',
         variants: [
           { id: 'pink', label: 'Medium/Pink', minsPerKg: 50, extraMins: 20, internalTemp: 60, color: 'bg-pink-600' },
-          { id: 'well', label: 'Well Done', minsPerKg: 60, extraMins: 30, internalTemp: 70, color: 'bg-stone-600' },
+          { id: 'well', label: 'Well Done', minsPerKg: 60, extraMins: 30, internalTemp: 71, color: 'bg-stone-600' },
         ]
       },
       shoulder: {
@@ -105,7 +103,7 @@ const MEAT_TYPES = {
         label: 'Rack of Lamb',
         variants: [
           { id: 'pink', label: 'Medium/Pink', minsPerKg: 35, extraMins: 10, internalTemp: 58, color: 'bg-pink-600' },
-          { id: 'well', label: 'Well Done', minsPerKg: 45, extraMins: 15, internalTemp: 68, color: 'bg-stone-600' },
+          { id: 'well', label: 'Well Done', minsPerKg: 45, extraMins: 15, internalTemp: 71, color: 'bg-stone-600' },
         ]
       }
     },
@@ -161,6 +159,14 @@ const App = () => {
     d.setMinutes(roundedMinutes);
     return d.toTimeString().slice(0, 5);
   });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [chefTip, setChefTip] = useState(null);
+  const [isLoadingTip, setIsLoadingTip] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const meatData = MEAT_TYPES[selectedType];
   const weightInKg = isImperial ? weight * 0.453592 : weight;
@@ -168,20 +174,59 @@ const App = () => {
   const handleTypeSelect = (type) => {
     const data = MEAT_TYPES[type];
     setSelectedType(type);
+    
+    // Logic to update state for cuts/variants
+    let nextVariant;
     if (data.hasCuts) {
       setSelectedCut(data.defaultCut);
-      setVariantId(data.cuts[data.defaultCut].variants[0].id);
+      const cut = data.cuts[data.defaultCut];
+      const preferredId = data.defaultVariant;
+      const defaultVariantId = cut.variants.some(v => v.id === preferredId) ? preferredId : cut.variants[0].id;
+      setVariantId(defaultVariantId);
+      nextVariant = cut.variants.find(v => v.id === defaultVariantId);
       setCurrentStep(2);
     } else {
       setVariantId(data.defaultVariant);
+      nextVariant = data.variants.find(v => v.id === data.defaultVariant);
       setCurrentStep(3);
+    }
+
+    // If in planning mode, ensure the schedule is valid for the new meat
+    if (isPlanningMode && nextVariant) {
+      const weightKg = isImperial ? weight * 0.453592 : weight;
+      const totalMins = Math.round((weightKg * nextVariant.minsPerKg) + nextVariant.extraMins);
+      const restingMins = 20;
+      const prepMins = 30;
+      const totalProcess = totalMins + restingMins + prepMins;
+      
+      const [h, m] = eatAtTime.split(':').map(Number);
+      let ready = new Date();
+      ready.setHours(h, m, 0, 0);
+      
+      // If the set time is in the past for today, assume it means tomorrow
+      // But we need to check if *starting* now for that time is possible
+      const now = new Date();
+      if (ready < now) ready.setDate(ready.getDate() + 1);
+      
+      const requiredStart = new Date(ready.getTime() - totalProcess * 60000);
+      
+      // If we would have had to start in the past, reset the eat time
+      if (requiredStart < now) {
+        const newReady = new Date(now.getTime() + totalProcess * 60000);
+        const minutes = newReady.getMinutes();
+        const rounded = Math.ceil(minutes / 15) * 15;
+        newReady.setMinutes(rounded);
+        setEatAtTime(newReady.toTimeString().slice(0, 5));
+      }
     }
   };
 
   const handleCutSelect = (cutKey) => {
     setSelectedCut(cutKey);
     const cutData = meatData.cuts[cutKey];
-    setVariantId(cutData.variants[0].id);
+    const preferredId = meatData.defaultVariant;
+    const defaultVariantId = cutData.variants.some(v => v.id === preferredId) ? preferredId : cutData.variants[0].id;
+    setVariantId(defaultVariantId);
     setCurrentStep(3);
   };
 
@@ -201,13 +246,17 @@ const App = () => {
       variant = meatData.variants.find(v => v.id === variantId) || meatData.variants[0];
     }
     
-    const totalMinutes = Math.round((weightInKg * variant.minsPerKg) + variant.extraMins);
+    let calculatedMinutes = (weightInKg * variant.minsPerKg) + variant.extraMins;
+    if (isFanOven) {
+      calculatedMinutes *= 0.9; // Fan ovens are typically ~10% faster/more efficient
+    }
+    const totalMinutes = Math.round(calculatedMinutes);
     const restingMinutes = 20;
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
 
     const now = new Date();
-    let startAt, ovenOutAt, readyAt;
+    let startAt, ovenOutAt, readyAt, fridgeOut;
 
     if (isPlanningMode) {
       const [h, m] = eatAtTime.split(':').map(Number);
@@ -219,13 +268,13 @@ const App = () => {
       }
       ovenOutAt = new Date(readyAt.getTime() - restingMinutes * 60000);
       startAt = new Date(ovenOutAt.getTime() - totalMinutes * 60000);
+      fridgeOut = new Date(startAt.getTime() - 30 * 60000);
     } else {
-      startAt = now;
-      ovenOutAt = new Date(now.getTime() + totalMinutes * 60000);
+      fridgeOut = now;
+      startAt = new Date(now.getTime() + 30 * 60000);
+      ovenOutAt = new Date(startAt.getTime() + totalMinutes * 60000);
       readyAt = new Date(ovenOutAt.getTime() + restingMinutes * 60000);
     }
-
-    const fridgeOut = new Date(startAt.getTime() - 30 * 60000);
 
     return {
       totalMinutes,
@@ -242,7 +291,54 @@ const App = () => {
       fridgeOut,
       activeVariant: variant
     };
-  }, [selectedType, selectedCut, variantId, weightInKg, meatData]);
+  }, [selectedType, selectedCut, variantId, weightInKg, meatData, isPlanningMode, eatAtTime]);
+
+  // Auto-fetch chef tip with debounce
+  useEffect(() => {
+    if (currentStep !== 3) return;
+    
+    // Clear previous tip when params change to encourage fresh look
+    // But maybe keep it if it's just a small weight change? 
+    // Let's keep it simple: fresh tip for fresh parameters.
+    // Actually, setting chefTip to null causes "Get a professional..." text to flash.
+    // Let's just let the loading state handle it.
+    
+    const timer = setTimeout(() => {
+      fetchChefTip();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [currentStep, selectedType, selectedCut, variantId, weight]);
+
+  const fetchChefTip = async () => {
+    setIsLoadingTip(true);
+    setChefTip(null);
+    try {
+      const variant = calculation.activeVariant;
+      const response = await fetch('/api/generate-tip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meat: meatData.name,
+          cut: meatData.hasCuts ? meatData.cuts[selectedCut].label : 'Whole',
+          weight: `${weight} ${isImperial ? 'lbs' : 'kg'}`,
+          doneness: variant.label
+        })
+      });
+      
+      const data = await response.json();
+      if (data.tip) {
+        setChefTip(data.tip);
+      } else {
+        setChefTip("Focus on resting the meat adequately; it makes all the difference.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch tip", error);
+      setChefTip("Ensure your oven is fully preheated before starting.");
+    } finally {
+      setIsLoadingTip(false);
+    }
+  };
 
   const SelectableOption = ({ label, isSelected, onClick, icon }) => (
     <button
@@ -259,18 +355,43 @@ const App = () => {
     </button>
   );
 
+  // Plan meal is "overdue" if the chosen eat-at time (today) has already passed
+  const eatAtToday = new Date();
+  const [eatH, eatM] = eatAtTime.split(':').map(Number);
+  eatAtToday.setHours(eatH, eatM, 0, 0);
+  const isPlanOverdue = isPlanningMode && eatAtToday < currentTime;
+
   return (
     <div className="min-h-screen bg-slate-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-8 font-sans text-slate-100 flex flex-col items-center">
       <div className="max-w-4xl w-full space-y-8">
         
         {/* Header */}
-        <div className="flex flex-col items-center gap-6">
-          <header className="flex items-center gap-3">
+        <div className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md w-[calc(100%+2rem)] -ml-4 px-4 md:w-full md:ml-0 md:px-0 py-2 md:py-4 -mt-4 md:-mt-8 flex flex-col items-center gap-3 shadow-sm shadow-black/20 border-b border-white/5 relative">
+          
+          {currentStep > 1 && (
+            <button 
+              onClick={() => setCurrentStep(currentStep === 3 && meatData.hasCuts ? 2 : 1)}
+              className="absolute left-2 md:left-0 top-3 md:top-5 p-2 text-slate-400 hover:text-white transition-colors z-20"
+              aria-label="Back"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+
+          <button onClick={() => setCurrentStep(1)} className="flex items-center gap-3 hover:opacity-80 transition-opacity w-auto z-10">
             <div className="bg-amber-700 p-2 rounded-xl shadow-lg shadow-amber-900/30">
               <ChefHat className="text-white w-6 h-6" />
             </div>
-            <h1 className="text-lg sm:text-xl font-black tracking-tighter text-white uppercase italic">Dom's Roast Pro</h1>
-          </header>
+            <div className="text-left">
+              <h1 className={`font-black tracking-tighter text-white uppercase italic transition-all ${currentStep > 1 ? 'text-xs text-slate-400' : 'text-lg sm:text-xl'}`}>Dom's Roast Pro</h1>
+              {currentStep > 1 && (
+                <div className="flex flex-wrap items-baseline gap-x-2 animate-in fade-in slide-in-from-left-2">
+                  <span className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight leading-none">{meatData.name}</span>
+                  {meatData.hasCuts && <span className="text-sm sm:text-base font-bold text-amber-500 uppercase tracking-wide leading-none">{meatData.cuts[selectedCut].label}</span>}
+                </div>
+              )}
+            </div>
+          </button>
 
           <div className="flex items-center gap-2 w-full max-w-xs">
             {[1, 2, 3].map((step) => (
@@ -317,15 +438,7 @@ const App = () => {
           {currentStep === 3 && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in zoom-in-95 duration-500">
               <div className="lg:col-span-7 space-y-6">
-                <div className="flex items-center justify-between gap-2">
-                  <button type="button" onClick={() => setCurrentStep(meatData.hasCuts ? 2 : 1)} className="inline-flex items-center gap-1 text-amber-400 text-sm font-bold uppercase tracking-widest py-2.5 min-h-[44px] hover:opacity-90 active:opacity-100 transition-opacity touch-manipulation">
-                    <ChevronLeft className="w-4 h-4 shrink-0" /> Go Back
-                  </button>
-                  <button type="button" onClick={() => setCurrentStep(1)} className="inline-flex items-center gap-1 text-slate-400 text-sm font-bold uppercase tracking-widest py-2.5 min-h-[44px] hover:text-white active:text-slate-200 transition-colors touch-manipulation">
-                    <RotateCcw className="w-3.5 h-3.5 shrink-0" /> Start Over
-                  </button>
-                </div>
-
+                
                 <div className="bg-slate-900 rounded-3xl p-5 sm:p-6 md:p-8 border border-slate-800 shadow-xl space-y-8 md:space-y-10">
                   <div className="flex flex-wrap gap-3 sm:gap-4 items-center justify-between border-b border-slate-800 pb-5 md:pb-6">
                     <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
@@ -345,8 +458,21 @@ const App = () => {
 
                   <div className="space-y-4">
                     <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-                      <button type="button" onClick={() => setIsPlanningMode(false)} className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold uppercase transition-all ${!isPlanningMode ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Start Now</button>
-                      <button type="button" onClick={() => setIsPlanningMode(true)} className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold uppercase transition-all ${isPlanningMode ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Plan Meal</button>
+                      <button type="button" onClick={() => {
+                        setIsPlanningMode(false);
+                        // Reset schedule to start now
+                      }} className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold uppercase transition-all ${!isPlanningMode ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Start Now</button>
+                      <button type="button" onClick={() => {
+                        setIsPlanningMode(true);
+                        // Set default eat time to earliest possible completion
+                        const now = new Date();
+                        const totalProcessMinutes = calculation.totalMinutes + calculation.restingMinutes + 30; // +30 for prep
+                        const earliestReady = new Date(now.getTime() + totalProcessMinutes * 60000);
+                        const minutes = earliestReady.getMinutes();
+                        const rounded = Math.ceil(minutes / 15) * 15;
+                        earliestReady.setMinutes(rounded);
+                        setEatAtTime(earliestReady.toTimeString().slice(0, 5));
+                      }} className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold uppercase transition-all ${isPlanningMode ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Plan Meal</button>
                     </div>
                     
                     {isPlanningMode && (
@@ -425,6 +551,15 @@ const App = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-3">
+                      {!isPlanningMode && (
+                        <div className="bg-black/15 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center gap-4">
+                          <Timer className="w-6 h-6 text-amber-100" />
+                          <div>
+                            <p className="text-xs font-bold uppercase opacity-90 mb-0.5 tracking-widest">Serve Time</p>
+                            <p className="text-2xl font-black">{calculation.readyAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                        </div>
+                      )}
                       <div className="bg-black/15 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center gap-4">
                         <Thermometer className="w-6 h-6 text-amber-100" />
                         <div>
@@ -437,7 +572,7 @@ const App = () => {
                         <Scale className="w-6 h-6 text-amber-100" />
                         <div>
                           <p className="text-xs font-bold uppercase opacity-90 mb-0.5 tracking-widest">Oven Temp</p>
-                          <p className="text-2xl font-black">{isFanOven ? '160' : '180'}°C <span className="text-xs opacity-80 font-bold">{isFanOven ? 'Fan' : 'Conv'}</span></p>
+                          <p className="text-2xl font-black">{isFanOven ? '180' : '200'}°C <span className="text-xs opacity-80 font-bold">{isFanOven ? 'Fan' : 'Conv'}</span></p>
                         </div>
                       </div>
                     </div>
@@ -454,38 +589,108 @@ const App = () => {
                   <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-black/10 rounded-full blur-2xl"></div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
-                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
-                     <Timer className="w-3.5 h-3.5" /> Recommended Schedule
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-6">
+                   <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest border-b border-slate-800 pb-4 flex items-center gap-2">
+                     <Timer className="w-5 h-5 text-slate-500" /> Recommended Schedule
                    </h4>
-                   <div className="space-y-4 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-slate-800">
-                      <div className="relative pl-7">
-                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-slate-700 border-4 border-slate-950" />
-                        <p className="text-xs font-black text-slate-400 uppercase">Step 1: Prep</p>
-                        <p className="text-sm text-slate-300 font-bold">
-                          {calculation.fridgeOut.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &bull; Remove from fridge
-                        </p>
-                      </div>
-                      <div className="relative pl-7">
-                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-700/60 border-4 border-slate-950" />
-                        <p className="text-xs font-black text-amber-400 uppercase">Step 2: Oven In</p>
-                        <p className="text-sm text-slate-300 font-bold">
-                          {calculation.startAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &bull; Preheat to {isFanOven ? '160' : '180'}°C
-                        </p>
-                      </div>
-                      <div className="relative pl-7">
-                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-amber-700 border-4 border-slate-950" />
-                        <p className="text-xs font-black text-amber-400 uppercase">Step 3: Rest</p>
-                        <p className="text-sm text-slate-300 font-bold">
-                          {calculation.ovenOutAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &bull; Foil & towels ({calculation.restingMinutes}m)
-                        </p>
-                      </div>
-                      <div className="relative pl-7">
-                        <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-950" />
-                        <p className="text-xs font-black text-white uppercase">Step 4: Serve</p>
-                        <p className="text-sm text-white font-black">{calculation.readyAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                      </div>
+                   <div className={`space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] ${isPlanOverdue ? 'before:bg-red-800' : 'before:bg-slate-800'}`}>
+                      {[
+                        { 
+                          time: calculation.fridgeOut, 
+                          endTime: calculation.startAt,
+                          label: 'Step 1: Prep', 
+                          detail: 'Remove from fridge',
+                          isLast: false 
+                        },
+                        { 
+                          time: calculation.startAt, 
+                          endTime: calculation.ovenOutAt,
+                          label: 'Step 2: Oven In', 
+                          detail: `Preheat to ${isFanOven ? '180' : '200'}°C`,
+                          isLast: false 
+                        },
+                        { 
+                          time: calculation.ovenOutAt, 
+                          endTime: calculation.readyAt,
+                          label: 'Step 3: Rest', 
+                          detail: `Foil & towels (${calculation.restingMinutes}m)`,
+                          isLast: false 
+                        },
+                        { 
+                          time: calculation.readyAt, 
+                          endTime: null, // End of timeline
+                          label: 'Step 4: Serve', 
+                          detail: '', // No detail text needed or different style
+                          isLast: true 
+                        }
+                      ].map((step, idx) => {
+                        // Step is "past" if its end has passed; last step (Serve) has no endTime so use step.time
+                        const stepEnd = step.endTime ?? step.time;
+                        const isPast = currentTime >= stepEnd;
+                        // Red when whole plan is overdue (eat-at passed) OR this step's time is earlier than now
+                        const isStepOverdue = isPlanOverdue || isPast;
+                        const isCurrent = !isPlanningMode && !isPast && currentTime >= step.time;
+                        const isFuture = !isPast && !isCurrent;
+                        
+                        return (
+                          <div key={idx} className={`relative pl-8 transition-opacity duration-500 ${isStepOverdue || isCurrent ? 'opacity-100' : 'opacity-40'}`}>
+                            <div className={`absolute left-0 top-1 w-5 h-5 rounded-full border-4 border-slate-950 transition-colors duration-500 z-10 ${
+                              isStepOverdue ? 'bg-red-600' :
+                              isCurrent ? 'bg-amber-500 scale-125 shadow-[0_0_15px_rgba(245,158,11,0.6)]' : 
+                              isPast ? 'bg-slate-600' : 
+                              'bg-slate-800'
+                            }`} />
+                            <p className={`text-sm font-black uppercase transition-colors duration-500 mb-1 ${
+                              isStepOverdue ? 'text-red-400' :
+                              isCurrent ? 'text-amber-400' : 
+                              isPast ? 'text-slate-500' : 
+                              'text-slate-500'
+                            }`}>
+                              {step.label} {isCurrent && <span className="inline-block ml-2 text-[10px] bg-amber-900/40 text-amber-300 px-1.5 py-0.5 rounded animate-pulse align-middle">NOW</span>}
+                            </p>
+                            <p className={`text-lg font-bold transition-colors duration-500 leading-tight ${
+                              isStepOverdue ? 'text-red-300' :
+                              isCurrent ? 'text-white' : 
+                              isPast ? 'text-slate-500' : 
+                              'text-slate-300'
+                            }`}>
+                              {step.time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              {step.detail && <span className="opacity-80 block sm:inline sm:ml-2 text-base font-medium"> {step.detail}</span>}
+                            </p>
+                          </div>
+                        );
+                      })}
                    </div>
+                </div>
+
+                {/* Chef's Tip Section */}
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" /> Chef's Tip
+                    </h4>
+                  </div>
+                  
+                  {isLoadingTip ? (
+                    <div className="flex items-center gap-3 text-slate-400 animate-pulse">
+                      <div className="w-4 h-4 rounded-full bg-slate-700"></div>
+                      <div className="h-2 bg-slate-700 rounded w-2/3"></div>
+                    </div>
+                  ) : chefTip ? (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      <p className="text-slate-300 text-sm font-medium leading-relaxed italic">"{chefTip}"</p>
+                      <button 
+                        onClick={fetchChefTip}
+                        className="mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 flex items-center gap-1 transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" /> New Tip
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-xs italic">
+                      Consulting our AI chef...
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
