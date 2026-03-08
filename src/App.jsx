@@ -342,14 +342,18 @@ const App = () => {
       });
       
       const data = await response.json();
-      if (data.tip) {
-        setChefTip(data.tip);
+      if (!response.ok) {
+        throw new Error(data.error || 'Tip unavailable');
+      }
+      const tip = data.tip && String(data.tip).trim();
+      if (tip) {
+        setChefTip(tip);
       } else {
-        setChefTip("Focus on resting the meat adequately; it makes all the difference.");
+        setChefTip("Ensure your oven is fully preheated before starting.");
       }
     } catch (error) {
       console.error("Failed to fetch tip", error);
-      setChefTip("Ensure your oven is fully preheated before starting.");
+      setChefTip("Tip unavailable. Try again or check your connection.");
     } finally {
       setIsLoadingTip(false);
     }

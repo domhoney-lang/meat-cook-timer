@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const tipTypes = [
       "cooking technique or seasoning advice (not resting)",
@@ -27,9 +27,14 @@ export default async function handler(req, res) {
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-
-    res.status(200).json({ tip: text });
+    let text = '';
+    try {
+      text = response.text ? response.text() : '';
+    } catch (_) {}
+    if (!text || !String(text).trim()) {
+      text = 'Let the meat rest under foil for the full 20 minutes—it keeps the juices in.';
+    }
+    res.status(200).json({ tip: String(text).trim() });
   } catch (error) {
     console.error('Gemini API Error:', error);
     res.status(500).json({ error: 'Failed to generate tip' });
