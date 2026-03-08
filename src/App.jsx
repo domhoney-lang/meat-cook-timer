@@ -8,7 +8,7 @@
  *   - Meat/cut/doneness selection, kg/lbs, fan/conventional (180°C / 200°C), 20 min rest, UK FSA-style timings
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ChefHat, Timer, Thermometer, Info, Beef, Drumstick, Ham, Clock, ChevronLeft, ChevronRight, RotateCcw, Scale, Wind, Plus, Minus, Sparkles } from 'lucide-react';
 
 // UK/EU Standard Meat Data with specific cuts and timing constants
@@ -162,6 +162,7 @@ const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [chefTip, setChefTip] = useState(null);
   const [isLoadingTip, setIsLoadingTip] = useState(false);
+  const eatAtTimeInputRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 10000);
@@ -513,11 +514,25 @@ const App = () => {
                               </button>
 
                               <input 
+                                ref={eatAtTimeInputRef}
                                 type="time" 
                                 value={eatAtTime} 
                                 onChange={(e) => setEatAtTime(e.target.value)}
-                                className="bg-transparent text-white text-xl sm:text-2xl font-black focus:outline-none text-center appearance-none w-[7rem] sm:w-32 border-0 p-0 [color-scheme:dark]"
+                                className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                aria-label="Eat at time"
+                                tabIndex={-1}
                               />
+                              <span className="text-white text-xl sm:text-2xl font-black text-center w-[7rem] sm:w-32 min-w-[5rem]">
+                                {eatAtTime}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => eatAtTimeInputRef.current?.showPicker?.() ?? eatAtTimeInputRef.current?.click()}
+                                className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center text-white hover:text-amber-200 active:opacity-80 touch-manipulation shrink-0"
+                                aria-label="Open time picker"
+                              >
+                                <Clock className="w-5 h-5" />
+                              </button>
 
                               <button 
                                 type="button"
@@ -528,9 +543,6 @@ const App = () => {
                                 <Plus className="w-5 h-5" />
                               </button>
                             </div>
-                            <span className="shrink-0 text-white" aria-hidden="true">
-                              <Clock className="w-5 h-5" />
-                            </span>
                          </div>
                       </div>
                     )}
