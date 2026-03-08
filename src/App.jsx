@@ -168,6 +168,18 @@ const App = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // On home (step 1), catch swipe-back / browser back so the user doesn't leave the site
+  useEffect(() => {
+    if (currentStep !== 1) return;
+    const url = window.location.pathname + window.location.search || '/';
+    history.pushState({ meatCookTimer: true, step: 1 }, '', url);
+    const handlePopState = () => {
+      history.pushState({ meatCookTimer: true, step: 1 }, '', url);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentStep]);
+
   const meatData = MEAT_TYPES[selectedType];
   const weightInKg = isImperial ? weight * 0.453592 : weight;
 
@@ -478,7 +490,10 @@ const App = () => {
                     {isPlanningMode && (
                       <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                          <div className="flex flex-wrap items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2 px-3 sm:px-4 gap-2">
-                            <span className="text-slate-400 text-sm font-bold uppercase tracking-widest shrink-0">Eat At:</span>
+                            <span className="text-white text-sm font-bold uppercase tracking-widest shrink-0 flex items-center gap-2">
+                              <Clock className="w-5 h-5 text-white" />
+                              Eat At:
+                            </span>
                             
                             <div className="flex items-center gap-1 sm:gap-2 bg-slate-900/50 rounded-lg p-1 ml-auto">
                               <button 
@@ -494,7 +509,7 @@ const App = () => {
                                 type="time" 
                                 value={eatAtTime} 
                                 onChange={(e) => setEatAtTime(e.target.value)}
-                                className="bg-transparent text-white text-xl sm:text-2xl font-black focus:outline-none text-center appearance-none w-[5.5rem] sm:w-28 border-0 p-0"
+                                className="bg-transparent text-white text-xl sm:text-2xl font-black focus:outline-none text-center appearance-none w-[7rem] sm:w-32 border-0 p-0 [color-scheme:dark]"
                               />
 
                               <button 

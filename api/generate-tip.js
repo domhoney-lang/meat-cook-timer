@@ -15,7 +15,15 @@ export default async function handler(req, res) {
     const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
-    const prompt = `You are a professional Michelin-star roast chef. Give one single, specific, high-impact cooking tip for roasting ${weight} of ${meat} (${cut}, ${doneness}). Focus on technique, seasoning, or resting. Keep it under 25 words. Do not use generic advice like "enjoy".`;
+    const tipTypes = [
+      "cooking technique or seasoning advice (not resting)",
+      "wine pairing recommendation",
+      "side dish suggestion that complements this roast",
+      "sauce or gravy idea specific to this meat"
+    ];
+    const selectedType = tipTypes[Math.floor(Math.random() * tipTypes.length)];
+
+    const prompt = `You are a professional Michelin-star roast chef. Give one single, specific, high-impact ${selectedType} for roasting ${weight} of ${meat} (${cut}, ${doneness}). Keep it under 25 words. Do not use generic advice like "enjoy".`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
