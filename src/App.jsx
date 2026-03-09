@@ -163,6 +163,8 @@ const App = () => {
   const [chefTip, setChefTip] = useState(null);
   const [isLoadingTip, setIsLoadingTip] = useState(false);
   const eatAtTimeInputRef = useRef(null);
+  const [includePrepInSchedule, setIncludePrepInSchedule] = useState(true);
+  const [includeOvenOnInSchedule, setIncludeOvenOnInSchedule] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 10000);
@@ -424,8 +426,7 @@ const App = () => {
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center">
-                <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">Choose Meat</h2>
-                <p className="text-slate-400 font-medium">What's on the menu today?</p>
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">What are you cooking?</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {Object.entries(MEAT_TYPES).map(([key, data]) => (
@@ -518,6 +519,7 @@ const App = () => {
                                 type="time" 
                                 value={eatAtTime} 
                                 onChange={(e) => setEatAtTime(e.target.value)}
+                                onBlur={(e) => { const v = e.target.value; if (v && v !== eatAtTime) setEatAtTime(v); }}
                                 className="absolute w-0 h-0 opacity-0 pointer-events-none"
                                 aria-label="Eat at time"
                                 tabIndex={-1}
@@ -627,113 +629,105 @@ const App = () => {
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-6">
-                   <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest border-b border-slate-800 pb-4 flex items-center gap-2">
-                     <Timer className="w-5 h-5 text-slate-500" /> Recommended Schedule
+                   <h4 className="text-base sm:text-lg font-black text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-4 flex items-center gap-2">
+                     <Timer className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" /> Recommended Schedule
                    </h4>
-                   <div className={`space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] ${isPlanOverdue ? 'before:bg-red-800' : 'before:bg-slate-800'}`}>
-                      {[
-                        { 
-                          time: calculation.fridgeOut, 
-                          endTime: calculation.ovenOnAt,
-                          label: 'Step 1: Prep', 
-                          detail: 'Remove from fridge',
-                          isLast: false 
-                        },
-                        { 
-                          time: calculation.ovenOnAt, 
-                          endTime: calculation.startAt,
-                          label: 'Step 2: Turn On Oven', 
-                          detail: `Preheat to ${isFanOven ? '180' : '200'}°C`,
-                          isLast: false 
-                        },
-                        { 
-                          time: calculation.startAt, 
-                          endTime: calculation.ovenOutAt,
-                          label: 'Step 3: Meat In', 
-                          detail: `Roast for ${calculation.hours > 0 ? calculation.hours + 'h ' : ''}${calculation.mins}m`,
-                          isLast: false 
-                        },
-                        { 
-                          time: calculation.ovenOutAt, 
-                          endTime: calculation.readyAt,
-                          label: 'Step 4: Rest', 
-                          detail: `Foil & towels (${calculation.restingMinutes}m)`,
-                          isLast: false 
-                        },
-                        { 
-                          time: calculation.readyAt, 
-                          endTime: null, // End of timeline
-                          label: 'Step 5: Serve', 
-                          detail: '', // No detail text needed or different style
-                          isLast: true 
-                        }
-                      ].map((step, idx) => {
-                        // Step is "past" if its end has passed; last step (Serve) has no endTime so use step.time
-                        const stepEnd = step.endTime ?? step.time;
-                        const isPast = currentTime >= stepEnd;
-                        // In Plan Meal: red if this step's recommended time is before now
-                        const stepRecommendedBeforeNow = isPlanningMode && currentTime > step.time;
-                        // Red when whole plan overdue, or step ended, or (plan mode) step's scheduled time is before now
-                        const isStepOverdue = isPlanOverdue || isPast || stepRecommendedBeforeNow;
-                        const isCurrent = !isPlanningMode && !isPast && currentTime >= step.time;
-                        const isFuture = !isPast && !isCurrent;
-                        
-                        return (
-                          <div key={idx} className={`relative pl-8 transition-opacity duration-500 ${isStepOverdue || isCurrent ? 'opacity-100' : 'opacity-40'}`}>
-                            <div className={`absolute left-0 top-1 w-5 h-5 rounded-full border-4 border-slate-950 transition-colors duration-500 z-10 ${
-                              isStepOverdue ? 'bg-red-600' :
-                              isCurrent ? 'bg-amber-500 scale-125 shadow-[0_0_15px_rgba(245,158,11,0.6)]' : 
-                              isPast ? 'bg-slate-600' : 
-                              'bg-slate-800'
-                            }`} />
-                            <p className={`text-sm font-black uppercase transition-colors duration-500 mb-1 ${
-                              isStepOverdue ? 'text-red-400' :
-                              isCurrent ? 'text-amber-400' : 
-                              isPast ? 'text-slate-500' : 
-                              'text-slate-500'
-                            }`}>
-                              {step.label} {isCurrent && <span className="inline-block ml-2 text-[10px] bg-amber-900/40 text-amber-300 px-1.5 py-0.5 rounded animate-pulse align-middle">NOW</span>}
-                            </p>
-                            <p className={`text-lg font-bold transition-colors duration-500 leading-tight ${
-                              isStepOverdue ? 'text-red-300' :
-                              isCurrent ? 'text-white' : 
-                              isPast ? 'text-slate-500' : 
-                              'text-slate-300'
-                            }`}>
-                              {step.time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                              {step.detail && <span className="opacity-80 block sm:inline sm:ml-2 text-base font-medium"> {step.detail}</span>}
-                            </p>
-                          </div>
-                        );
-                      })}
+                   <div className="space-y-4 mb-8">
+                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest border-t border-slate-800 pt-6">Include Steps</p>
+                     <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800 w-full gap-1.5">
+                       <button
+                         type="button"
+                         onClick={() => setIncludePrepInSchedule(!includePrepInSchedule)}
+                         className={`flex-1 min-h-[44px] rounded-lg text-xs sm:text-sm font-bold uppercase transition-all touch-manipulation ${includePrepInSchedule ? 'bg-slate-700 text-white shadow-sm' : 'bg-transparent text-slate-400 hover:text-slate-200'}`}
+                       >
+                         Prep
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => setIncludeOvenOnInSchedule(!includeOvenOnInSchedule)}
+                         className={`flex-1 min-h-[44px] rounded-lg text-xs sm:text-sm font-bold uppercase transition-all touch-manipulation ${includeOvenOnInSchedule ? 'bg-slate-700 text-white shadow-sm' : 'bg-transparent text-slate-400 hover:text-slate-200'}`}
+                       >
+                         Turn On Oven
+                       </button>
+                     </div>
+                   </div>
+                   <div key={`schedule-${eatAtTime}-${weightInKg}-${isPlanningMode}-${includePrepInSchedule}-${includeOvenOnInSchedule}`} className={`space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] ${isPlanOverdue ? 'before:bg-red-800' : 'before:bg-slate-800'}`}>
+                      {(() => {
+                        const offsetMs = (includePrepInSchedule ? 0 : 30 * 60000) + (includeOvenOnInSchedule ? 0 : 10 * 60000);
+                        const shift = (date) => date ? new Date(date.getTime() - offsetMs) : null;
+                        return [
+                          { time: calculation.fridgeOut, endTime: calculation.ovenOnAt, shortLabel: 'Prep', detail: 'Remove from fridge', isLast: false },
+                          { time: calculation.ovenOnAt, endTime: calculation.startAt, shortLabel: 'Turn On Oven', detail: `Preheat to ${isFanOven ? '180' : '200'}°C`, isLast: false },
+                          { time: calculation.startAt, endTime: calculation.ovenOutAt, shortLabel: 'Meat In', detail: `Roast for ${calculation.hours > 0 ? calculation.hours + 'h ' : ''}${calculation.mins}m`, isLast: false },
+                          { time: calculation.ovenOutAt, endTime: calculation.readyAt, shortLabel: 'Rest', detail: `Foil & towels (${calculation.restingMinutes}m)`, isLast: false },
+                          { time: calculation.readyAt, endTime: null, shortLabel: 'Serve', detail: '', isLast: true }
+                        ]
+                        .filter((_, idx) => (idx === 0 ? includePrepInSchedule : true) && (idx === 1 ? includeOvenOnInSchedule : true))
+                        .map((step, displayIdx) => {
+                          const time = shift(step.time);
+                          const endTime = shift(step.endTime);
+                          const stepEnd = endTime ?? time;
+                          const isPast = currentTime >= stepEnd;
+                          const stepRecommendedBeforeNow = isPlanningMode && currentTime > time;
+                          const isStepOverdue = isPlanOverdue || isPast || stepRecommendedBeforeNow;
+                          const isCurrent = !isPlanningMode && !isPast && currentTime >= time;
+                          return (
+                            <div key={displayIdx} className={`relative pl-8 transition-opacity duration-500 ${isStepOverdue || isCurrent ? 'opacity-100' : 'opacity-40'}`}>
+                              <div className={`absolute left-0 top-1 w-5 h-5 rounded-full border-4 border-slate-950 transition-colors duration-500 z-10 ${
+                                isStepOverdue ? 'bg-red-600' :
+                                isCurrent ? 'bg-amber-500 scale-125 shadow-[0_0_15px_rgba(245,158,11,0.6)]' :
+                                isPast ? 'bg-slate-600' :
+                                'bg-slate-800'
+                              }`} />
+                              <p className={`text-base sm:text-lg font-black uppercase transition-colors duration-500 mb-1.5 ${
+                                isStepOverdue ? 'text-red-300' :
+                                isCurrent ? 'text-amber-300' :
+                                isPast ? 'text-slate-400' :
+                                'text-slate-200'
+                              }`}>
+                                Step {displayIdx + 1}: {step.shortLabel} {isCurrent && <span className="inline-block ml-2 text-xs bg-amber-900/50 text-amber-200 px-2 py-0.5 rounded animate-pulse align-middle">NOW</span>}
+                              </p>
+                              <p className={`text-xl sm:text-2xl font-bold transition-colors duration-500 leading-tight ${
+                                isStepOverdue ? 'text-red-200' :
+                                isCurrent ? 'text-white' :
+                                isPast ? 'text-slate-400' :
+                                'text-slate-100'
+                              }`}>
+                                {time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                {step.detail && <span className="opacity-90 block sm:inline sm:ml-2 text-base sm:text-lg font-medium text-slate-300"> {step.detail}</span>}
+                              </p>
+                            </div>
+                          );
+                        });
+                      })()}
                    </div>
                 </div>
 
                 {/* Chef's Tip Section */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 relative overflow-hidden">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                      <Sparkles className="w-4 h-4" /> Chef's Tip
+                    <h4 className="text-base sm:text-lg font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" /> Chef's Tip
                     </h4>
                   </div>
                   
                   {isLoadingTip ? (
-                    <div className="flex items-center gap-3 text-slate-400 animate-pulse">
-                      <div className="w-4 h-4 rounded-full bg-slate-700"></div>
-                      <div className="h-2 bg-slate-700 rounded w-2/3"></div>
+                    <div className="flex items-center gap-3 text-slate-300 animate-pulse">
+                      <div className="w-5 h-5 rounded-full bg-slate-600"></div>
+                      <div className="h-3 bg-slate-600 rounded w-2/3"></div>
                     </div>
                   ) : chefTip ? (
                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                      <p className="text-slate-300 text-sm font-medium leading-relaxed italic">"{chefTip}"</p>
+                      <p className="text-slate-100 text-base sm:text-lg font-medium leading-relaxed italic">"{chefTip}"</p>
                       <button 
                         onClick={fetchChefTip}
-                        className="mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 flex items-center gap-1 transition-colors"
+                        className="mt-4 text-xs font-bold uppercase tracking-widest text-slate-300 hover:text-amber-400 flex items-center gap-1.5 transition-colors"
                       >
-                        <RotateCcw className="w-3 h-3" /> New Tip
+                        <RotateCcw className="w-4 h-4" /> New Tip
                       </button>
                     </div>
                   ) : (
-                    <p className="text-slate-500 text-xs italic">
+                    <p className="text-slate-400 text-sm italic">
                       Consulting our AI chef...
                     </p>
                   )}
@@ -744,7 +738,7 @@ const App = () => {
         </div>
 
         <footer className="text-center text-slate-600 text-xs py-8 md:py-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] uppercase tracking-[0.4em] font-black">
-          Precision Roasting &bull; UK FSA Guidelines &bull; 2026
+          Honey Precision Roasting &bull; UK FSA Guidelines &bull; 2026
         </footer>
       </div>
     </div>
