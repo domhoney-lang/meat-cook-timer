@@ -6,6 +6,8 @@
  *   - Serve Time card in Roasting Time section (Start Now); Recommended Schedule step highlighting
  *   - Chef's Tip (Gemini API), sticky header with back/start over, fan oven 10% time reduction
  *   - Meat/cut/doneness selection, kg/lbs, fan/conventional (180°C / 200°C), 20 min rest, UK FSA-style timings
+ *   - Dynamic schedule adjustment: Toggles for including 'Prep' and 'Turn On Oven' steps
+ *   - Fixed mobile clock icon visibility and layout for Eat At controls
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -211,8 +213,9 @@ const App = () => {
       const weightKg = isImperial ? weight * 0.453592 : weight;
       const totalMins = Math.round((weightKg * nextVariant.minsPerKg) + nextVariant.extraMins);
       const restingMins = 20;
-      const prepMins = 30;
-      const totalProcess = totalMins + restingMins + prepMins;
+      const prepMins = includePrepInSchedule ? 30 : 0;
+      const preheatMins = includeOvenOnInSchedule ? 10 : 0;
+      const totalProcess = totalMins + restingMins + prepMins + preheatMins;
       
       const [h, m] = eatAtTime.split(':').map(Number);
       let ready = new Date();
@@ -267,6 +270,8 @@ const App = () => {
     }
     const totalMinutes = Math.round(calculatedMinutes);
     const restingMinutes = 20;
+    const prepMinutes = includePrepInSchedule ? 20 : 0;
+    const preheatMinutes = includeOvenOnInSchedule ? 10 : 0;
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
 
@@ -283,12 +288,12 @@ const App = () => {
       }
       ovenOutAt = new Date(readyAt.getTime() - restingMinutes * 60000);
       startAt = new Date(ovenOutAt.getTime() - totalMinutes * 60000);
-      ovenOnAt = new Date(startAt.getTime() - 10 * 60000); // 10 mins before cooking starts
-      fridgeOut = new Date(startAt.getTime() - 30 * 60000);
+      ovenOnAt = new Date(startAt.getTime() - preheatMinutes * 60000);
+      fridgeOut = new Date(ovenOnAt.getTime() - prepMinutes * 60000);
     } else {
       fridgeOut = now;
-      ovenOnAt = new Date(now.getTime() + 20 * 60000); // 20m after fridge out (10m before cooking)
-      startAt = new Date(now.getTime() + 30 * 60000);
+      ovenOnAt = new Date(now.getTime() + prepMinutes * 60000);
+      startAt = new Date(ovenOnAt.getTime() + preheatMinutes * 60000);
       ovenOutAt = new Date(startAt.getTime() + totalMinutes * 60000);
       readyAt = new Date(ovenOutAt.getTime() + restingMinutes * 60000);
     }
@@ -296,6 +301,8 @@ const App = () => {
     return {
       totalMinutes,
       restingMinutes,
+      prepMinutes,
+      preheatMinutes,
       hours,
       mins,
       internalTemp: variant.internalTemp,
@@ -309,7 +316,7 @@ const App = () => {
       fridgeOut,
       activeVariant: variant
     };
-  }, [selectedType, selectedCut, variantId, weightInKg, meatData, isPlanningMode, eatAtTime]);
+  }, [selectedType, selectedCut, variantId, weightInKg, meatData, isPlanningMode, eatAtTime, includePrepInSchedule, includeOvenOnInSchedule]);
 
   // Auto-fetch chef tip with debounce
   useEffect(() => {
@@ -487,7 +494,7 @@ const App = () => {
                         setIsPlanningMode(true);
                         // Set default eat time to earliest possible completion
                         const now = new Date();
-                        const totalProcessMinutes = calculation.totalMinutes + calculation.restingMinutes + 30; // +30 for prep
+                        const totalProcessMinutes = calculation.totalMinutes + calculation.restingMinutes + calculation.prepMinutes + calculation.preheatMinutes;
                         const earliestReady = new Date(now.getTime() + totalProcessMinutes * 60000);
                         const minutes = earliestReady.getMinutes();
                         const rounded = Math.ceil(minutes / 15) * 15;
@@ -651,55 +658,51 @@ const App = () => {
                        </button>
                      </div>
                    </div>
-                   <div key={`schedule-${eatAtTime}-${weightInKg}-${isPlanningMode}-${includePrepInSchedule}-${includeOvenOnInSchedule}`} className={`space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] ${isPlanOverdue ? 'before:bg-red-800' : 'before:bg-slate-800'}`}>
-                      {(() => {
-                        const offsetMs = (includePrepInSchedule ? 0 : 30 * 60000) + (includeOvenOnInSchedule ? 0 : 10 * 60000);
-                        const shift = (date) => date ? new Date(date.getTime() - offsetMs) : null;
-                        return [
-                          { time: calculation.fridgeOut, endTime: calculation.ovenOnAt, shortLabel: 'Prep', detail: 'Remove from fridge', isLast: false },
-                          { time: calculation.ovenOnAt, endTime: calculation.startAt, shortLabel: 'Turn On Oven', detail: `Preheat to ${isFanOven ? '180' : '200'}°C`, isLast: false },
-                          { time: calculation.startAt, endTime: calculation.ovenOutAt, shortLabel: 'Meat In', detail: `Roast for ${calculation.hours > 0 ? calculation.hours + 'h ' : ''}${calculation.mins}m`, isLast: false },
-                          { time: calculation.ovenOutAt, endTime: calculation.readyAt, shortLabel: 'Rest', detail: `Foil & towels (${calculation.restingMinutes}m)`, isLast: false },
-                          { time: calculation.readyAt, endTime: null, shortLabel: 'Serve', detail: '', isLast: true }
-                        ]
-                        .filter((_, idx) => (idx === 0 ? includePrepInSchedule : true) && (idx === 1 ? includeOvenOnInSchedule : true))
-                        .map((step, displayIdx) => {
-                          const time = shift(step.time);
-                          const endTime = shift(step.endTime);
-                          const stepEnd = endTime ?? time;
-                          const isPast = currentTime >= stepEnd;
-                          const stepRecommendedBeforeNow = isPlanningMode && currentTime > time;
-                          const isStepOverdue = isPlanOverdue || isPast || stepRecommendedBeforeNow;
-                          const isCurrent = !isPlanningMode && !isPast && currentTime >= time;
-                          return (
-                            <div key={displayIdx} className={`relative pl-8 transition-opacity duration-500 ${isStepOverdue || isCurrent ? 'opacity-100' : 'opacity-40'}`}>
-                              <div className={`absolute left-0 top-1 w-5 h-5 rounded-full border-4 border-slate-950 transition-colors duration-500 z-10 ${
-                                isStepOverdue ? 'bg-red-600' :
-                                isCurrent ? 'bg-amber-500 scale-125 shadow-[0_0_15px_rgba(245,158,11,0.6)]' :
-                                isPast ? 'bg-slate-600' :
-                                'bg-slate-800'
-                              }`} />
-                              <p className={`text-base sm:text-lg font-black uppercase transition-colors duration-500 mb-1.5 ${
-                                isStepOverdue ? 'text-red-300' :
-                                isCurrent ? 'text-amber-300' :
-                                isPast ? 'text-slate-400' :
-                                'text-slate-200'
-                              }`}>
-                                Step {displayIdx + 1}: {step.shortLabel} {isCurrent && <span className="inline-block ml-2 text-xs bg-amber-900/50 text-amber-200 px-2 py-0.5 rounded animate-pulse align-middle">NOW</span>}
-                              </p>
-                              <p className={`text-xl sm:text-2xl font-bold transition-colors duration-500 leading-tight ${
-                                isStepOverdue ? 'text-red-200' :
-                                isCurrent ? 'text-white' :
-                                isPast ? 'text-slate-400' :
-                                'text-slate-100'
-                              }`}>
-                                {time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                {step.detail && <span className="opacity-90 block sm:inline sm:ml-2 text-base sm:text-lg font-medium text-slate-300"> {step.detail}</span>}
-                              </p>
-                            </div>
-                          );
-                        });
-                      })()}
+                   <div className={`space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] ${isPlanOverdue ? 'before:bg-red-800' : 'before:bg-slate-800'}`}>
+                      {[
+                        { time: calculation.fridgeOut, endTime: calculation.ovenOnAt, shortLabel: 'Prep', detail: 'Remove from fridge' },
+                        { time: calculation.ovenOnAt, endTime: calculation.startAt, shortLabel: 'Turn On Oven', detail: `Preheat to ${isFanOven ? '180' : '200'}°C` },
+                        { time: calculation.startAt, endTime: calculation.ovenOutAt, shortLabel: 'Meat In', detail: `Roast for ${calculation.hours > 0 ? calculation.hours + 'h ' : ''}${calculation.mins}m` },
+                        { time: calculation.ovenOutAt, endTime: calculation.readyAt, shortLabel: 'Rest', detail: `Foil & towels (${calculation.restingMinutes}m)` },
+                        { time: calculation.readyAt, endTime: null, shortLabel: 'Serve', detail: '' }
+                      ]
+                      .filter((_, idx) => (idx === 0 ? includePrepInSchedule : true) && (idx === 1 ? includeOvenOnInSchedule : true))
+                      .map((step, displayIdx) => {
+                        const time = step.time;
+                        const endTime = step.endTime;
+                        const stepEnd = endTime ?? time;
+                        const isPast = currentTime >= stepEnd;
+                        const stepRecommendedBeforeNow = isPlanningMode && currentTime > time;
+                        const isStepOverdue = isPlanOverdue || isPast || stepRecommendedBeforeNow;
+                        const isCurrent = !isPlanningMode && !isPast && currentTime >= time;
+                        return (
+                          <div key={displayIdx} className={`relative pl-8 transition-opacity duration-500 ${isStepOverdue || isCurrent ? 'opacity-100' : 'opacity-40'}`}>
+                            <div className={`absolute left-0 top-1 w-5 h-5 rounded-full border-4 border-slate-950 transition-colors duration-500 z-10 ${
+                              isStepOverdue ? 'bg-red-600' :
+                              isCurrent ? 'bg-amber-500 scale-125 shadow-[0_0_15px_rgba(245,158,11,0.6)]' :
+                              isPast ? 'bg-slate-600' :
+                              'bg-slate-800'
+                            }`} />
+                            <p className={`text-base sm:text-lg font-black uppercase transition-colors duration-500 mb-1.5 ${
+                              isStepOverdue ? 'text-red-300' :
+                              isCurrent ? 'text-amber-300' :
+                              isPast ? 'text-slate-400' :
+                              'text-slate-200'
+                            }`}>
+                              Step {displayIdx + 1}: {step.shortLabel} {isCurrent && <span className="inline-block ml-2 text-xs bg-amber-900/50 text-amber-200 px-2 py-0.5 rounded animate-pulse align-middle">NOW</span>}
+                            </p>
+                            <p className={`text-xl sm:text-2xl font-bold transition-colors duration-500 leading-tight ${
+                              isStepOverdue ? 'text-red-200' :
+                              isCurrent ? 'text-white' :
+                              isPast ? 'text-slate-400' :
+                              'text-slate-100'
+                            }`}>
+                              {time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              {step.detail && <span className="opacity-90 block sm:inline sm:ml-2 text-base sm:text-lg font-medium text-slate-300"> {step.detail}</span>}
+                            </p>
+                          </div>
+                        );
+                      })}
                    </div>
                 </div>
 
