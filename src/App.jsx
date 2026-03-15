@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ChefHat, Timer, Thermometer, Info, Beef, Drumstick, Ham, Clock, ChevronLeft, ChevronRight, RotateCcw, Scale, Wind, Plus, Minus, Sparkles } from 'lucide-react';
+import { ChefHat, Timer, Thermometer, Info, Beef, Drumstick, Ham, Clock, ChevronLeft, ChevronRight, RotateCcw, Scale, Wind, Plus, Minus, Sparkles, Share, CheckCircle2 } from 'lucide-react';
 
 // UK/EU Standard Meat Data with specific cuts and timing constants
 const MEAT_TYPES = {
@@ -144,6 +144,14 @@ const MEAT_TYPES = {
   }
 };
 
+const SIDE_DISHES = [
+  { id: 'roast_potatoes', label: 'Roast Potatoes', cookTimeMins: 50 },
+  { id: 'yorkshires', label: 'Yorkshire Puddings', cookTimeMins: 25 },
+  { id: 'roast_veg', label: 'Roast Veg', cookTimeMins: 40 },
+  { id: 'stuffing', label: 'Stuffing Balls', cookTimeMins: 20 },
+  { id: 'cauliflower_cheese', label: 'Cauliflower Cheese', cookTimeMins: 35 },
+];
+
 const App = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedType, setSelectedType] = useState('chicken');
@@ -167,23 +175,13 @@ const App = () => {
   const eatAtTimeInputRef = useRef(null);
   const [includePrepInSchedule, setIncludePrepInSchedule] = useState(true);
   const [includeOvenOnInSchedule, setIncludeOvenOnInSchedule] = useState(true);
+  const [selectedSides, setSelectedSides] = useState([]);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 10000);
     return () => clearInterval(timer);
   }, []);
-
-  // On home (step 1), catch swipe-back / browser back so the user doesn't leave the site
-  useEffect(() => {
-    if (currentStep !== 1) return;
-    const url = window.location.pathname + window.location.search || '/';
-    history.pushState({ meatCookTimer: true, step: 1 }, '', url);
-    const handlePopState = () => {
-      history.pushState({ meatCookTimer: true, step: 1 }, '', url);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [currentStep]);
 
   const meatData = MEAT_TYPES[selectedType];
   const weightInKg = isImperial ? weight * 0.453592 : weight;
@@ -366,6 +364,47 @@ const App = () => {
       setChefTip("Tip unavailable. Try again or check your connection.");
     } finally {
       setIsLoadingTip(false);
+    }
+  };
+
+  const shareSchedule = () => {
+    const baseSteps = [
+      { time: calculation.fridgeOut, shortLabel: 'Prep' },
+      { time: calculation.ovenOnAt, shortLabel: 'Turn On Oven' },
+      { time: calculation.startAt, shortLabel: 'Meat In' },
+      { time: calculation.ovenOutAt, shortLabel: 'Rest Meat' }
+    ].filter((_, idx) => (idx === 0 ? includePrepInSchedule : true) && (idx === 1 ? includeOvenOnInSchedule : true));
+
+    const sideSteps = selectedSides.map(sideId => {
+      const side = SIDE_DISHES.find(s => s.id === sideId);
+      return {
+        time: new Date(calculation.readyAt.getTime() - side.cookTimeMins * 60000),
+        shortLabel: `${side.label} In`
+      };
+    });
+
+    const allSteps = [...baseSteps, ...sideSteps].sort((a, b) => a.time - b.time);
+    allSteps.push({ time: calculation.readyAt, shortLabel: 'Serve' });
+
+    const meatDesc = meatData.hasCuts ? `${meatData.name} (${meatData.cuts[selectedCut].label})` : meatData.name;
+    const timeLines = allSteps.map((step, idx) => 
+      `${step.time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - Step ${idx + 1}: ${step.shortLabel}`
+    ).join('\n');
+
+    const textToShare = `My Roast Pro Schedule\n${meatDesc} (${weight}${isImperial ? 'lbs' : 'kg'})\n\n${timeLines}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'My Roast Pro Schedule',
+        text: textToShare,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(textToShare)
+        .then(() => {
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+        })
+        .catch(console.error);
     }
   };
 
@@ -640,7 +679,22 @@ const App = () => {
                      <Timer className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" /> Recommended Schedule
                    </h4>
                    <div className="space-y-4 mb-8">
-                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest border-t border-slate-800 pt-6">Include Steps</p>
+                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest border-t border-slate-800 pt-6">Side Dishes</p>
+                     <div className="flex flex-wrap gap-2">
+                       {SIDE_DISHES.map(side => (
+                         <button
+                           key={side.id}
+                           type="button"
+                           onClick={() => setSelectedSides(prev => 
+                             prev.includes(side.id) ? prev.filter(id => id !== side.id) : [...prev, side.id]
+                           )}
+                           className={`px-4 py-2 rounded-full text-xs font-bold uppercase transition-all touch-manipulation border-2 ${selectedSides.includes(side.id) ? 'border-amber-600 bg-amber-600/20 text-amber-300' : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-600'}`}
+                         >
+                           {side.label} ({side.cookTimeMins}m)
+                         </button>
+                       ))}
+                     </div>
+                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest border-t border-slate-800 pt-6 mt-6">Include Steps</p>
                      <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800 w-full gap-1.5">
                        <button
                          type="button"
@@ -659,50 +713,95 @@ const App = () => {
                      </div>
                    </div>
                    <div className={`space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] ${isPlanOverdue ? 'before:bg-red-800' : 'before:bg-slate-800'}`}>
-                      {[
-                        { time: calculation.fridgeOut, endTime: calculation.ovenOnAt, shortLabel: 'Prep', detail: 'Remove from fridge' },
-                        { time: calculation.ovenOnAt, endTime: calculation.startAt, shortLabel: 'Turn On Oven', detail: `Preheat to ${isFanOven ? '180' : '200'}°C` },
-                        { time: calculation.startAt, endTime: calculation.ovenOutAt, shortLabel: 'Meat In', detail: `Roast for ${calculation.hours > 0 ? calculation.hours + 'h ' : ''}${calculation.mins}m` },
-                        { time: calculation.ovenOutAt, endTime: calculation.readyAt, shortLabel: 'Rest', detail: `Foil & towels (${calculation.restingMinutes}m)` },
-                        { time: calculation.readyAt, endTime: null, shortLabel: 'Serve', detail: '' }
-                      ]
-                      .filter((_, idx) => (idx === 0 ? includePrepInSchedule : true) && (idx === 1 ? includeOvenOnInSchedule : true))
-                      .map((step, displayIdx) => {
-                        const time = step.time;
-                        const endTime = step.endTime;
-                        const stepEnd = endTime ?? time;
-                        const isPast = currentTime >= stepEnd;
-                        const stepRecommendedBeforeNow = isPlanningMode && currentTime > time;
-                        const isStepOverdue = isPlanOverdue || isPast || stepRecommendedBeforeNow;
-                        const isCurrent = !isPlanningMode && !isPast && currentTime >= time;
-                        return (
-                          <div key={displayIdx} className={`relative pl-8 transition-opacity duration-500 ${isStepOverdue || isCurrent ? 'opacity-100' : 'opacity-40'}`}>
-                            <div className={`absolute left-0 top-1 w-5 h-5 rounded-full border-4 border-slate-950 transition-colors duration-500 z-10 ${
-                              isStepOverdue ? 'bg-red-600' :
-                              isCurrent ? 'bg-amber-500 scale-125 shadow-[0_0_15px_rgba(245,158,11,0.6)]' :
-                              isPast ? 'bg-slate-600' :
-                              'bg-slate-800'
-                            }`} />
-                            <p className={`text-base sm:text-lg font-black uppercase transition-colors duration-500 mb-1.5 ${
-                              isStepOverdue ? 'text-red-300' :
-                              isCurrent ? 'text-amber-300' :
-                              isPast ? 'text-slate-400' :
-                              'text-slate-200'
-                            }`}>
-                              Step {displayIdx + 1}: {step.shortLabel} {isCurrent && <span className="inline-block ml-2 text-xs bg-amber-900/50 text-amber-200 px-2 py-0.5 rounded animate-pulse align-middle">NOW</span>}
-                            </p>
-                            <p className={`text-xl sm:text-2xl font-bold transition-colors duration-500 leading-tight ${
-                              isStepOverdue ? 'text-red-200' :
-                              isCurrent ? 'text-white' :
-                              isPast ? 'text-slate-400' :
-                              'text-slate-100'
-                            }`}>
-                              {time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                              {step.detail && <span className="opacity-90 block sm:inline sm:ml-2 text-base sm:text-lg font-medium text-slate-300"> {step.detail}</span>}
-                            </p>
-                          </div>
-                        );
-                      })}
+                      {(() => {
+                        const baseSteps = [
+                          { time: calculation.fridgeOut, endTime: calculation.ovenOnAt, shortLabel: 'Prep', detail: 'Remove from fridge', show: includePrepInSchedule },
+                          { time: calculation.ovenOnAt, endTime: calculation.startAt, shortLabel: 'Turn On Oven', detail: `Preheat to ${isFanOven ? '180' : '200'}°C`, show: includeOvenOnInSchedule },
+                          { time: calculation.startAt, endTime: calculation.ovenOutAt, shortLabel: 'Meat In', detail: `Roast for ${calculation.hours > 0 ? calculation.hours + 'h ' : ''}${calculation.mins}m`, show: true },
+                          { time: calculation.ovenOutAt, endTime: calculation.readyAt, shortLabel: 'Rest Meat', detail: `Foil & towels (${calculation.restingMinutes}m)`, show: true }
+                        ];
+
+                        const sideSteps = selectedSides.map(sideId => {
+                          const side = SIDE_DISHES.find(s => s.id === sideId);
+                          const putInAt = new Date(calculation.readyAt.getTime() - side.cookTimeMins * 60000);
+                          return {
+                            time: putInAt,
+                            endTime: calculation.readyAt,
+                            shortLabel: `${side.label} In`,
+                            detail: `Roast for ${side.cookTimeMins}m`,
+                            show: true,
+                            isSide: true
+                          };
+                        });
+
+                        const allSteps = [...baseSteps.filter(s => s.show), ...sideSteps]
+                          .sort((a, b) => a.time - b.time);
+
+                        allSteps.push({ 
+                          time: calculation.readyAt, 
+                          endTime: null, 
+                          shortLabel: 'Serve', 
+                          detail: selectedSides.length > 0 ? 'Meat and sides ready!' : '', 
+                          show: true 
+                        });
+
+                        return allSteps.map((step, displayIdx) => {
+                          const time = step.time;
+                          const endTime = step.endTime;
+                          const stepEnd = endTime ?? time;
+                          const isPast = currentTime >= stepEnd;
+                          const stepRecommendedBeforeNow = isPlanningMode && currentTime > time;
+                          const isStepOverdue = isPlanOverdue || isPast || stepRecommendedBeforeNow;
+                          const isCurrent = !isPlanningMode && !isPast && currentTime >= time;
+                          return (
+                            <div key={displayIdx} className={`relative pl-8 transition-opacity duration-500 ${isStepOverdue || isCurrent ? 'opacity-100' : 'opacity-40'}`}>
+                              <div className={`absolute left-0 top-1 w-5 h-5 rounded-full border-4 border-slate-950 transition-colors duration-500 z-10 ${
+                                isStepOverdue ? 'bg-red-600' :
+                                isCurrent ? (step.isSide ? 'bg-amber-400 scale-125 shadow-[0_0_15px_rgba(251,191,36,0.6)]' : 'bg-amber-500 scale-125 shadow-[0_0_15px_rgba(245,158,11,0.6)]') :
+                                isPast ? 'bg-slate-600' :
+                                'bg-slate-800'
+                              }`} />
+                              <p className={`text-base sm:text-lg font-black uppercase transition-colors duration-500 mb-1.5 ${
+                                isStepOverdue ? 'text-red-300' :
+                                isCurrent ? (step.isSide ? 'text-amber-200' : 'text-amber-300') :
+                                isPast ? 'text-slate-400' :
+                                (step.isSide ? 'text-amber-200/80' : 'text-slate-200')
+                              }`}>
+                                Step {displayIdx + 1}: {step.shortLabel} {isCurrent && <span className="inline-block ml-2 text-xs bg-amber-900/50 text-amber-200 px-2 py-0.5 rounded animate-pulse align-middle">NOW</span>}
+                              </p>
+                              <p className={`text-xl sm:text-2xl font-bold transition-colors duration-500 leading-tight ${
+                                isStepOverdue ? 'text-red-200' :
+                                isCurrent ? 'text-white' :
+                                isPast ? 'text-slate-400' :
+                                'text-slate-100'
+                              }`}>
+                                {time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                {step.detail && <span className="opacity-90 block sm:inline sm:ml-2 text-base sm:text-lg font-medium text-slate-300"> {step.detail}</span>}
+                              </p>
+                            </div>
+                          );
+                        });
+                      })()}
+                   </div>
+
+                   <div className="pt-8 border-t border-slate-800">
+                     <button
+                       type="button"
+                       onClick={shareSchedule}
+                       className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 py-4 px-6 rounded-2xl font-bold uppercase tracking-widest transition-all touch-manipulation border border-slate-700 active:scale-[0.98]"
+                     >
+                       {isCopied ? (
+                         <>
+                           <CheckCircle2 className="w-5 h-5 text-green-400" />
+                           <span className="text-green-400">Copied!</span>
+                         </>
+                       ) : (
+                         <>
+                           <Share className="w-5 h-5" />
+                           Share Schedule
+                         </>
+                       )}
+                     </button>
                    </div>
                 </div>
 
@@ -742,6 +841,8 @@ const App = () => {
 
         <footer className="text-center text-slate-600 text-xs py-8 md:py-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] uppercase tracking-[0.4em] font-black">
           Honey Precision Roasting &bull; UK FSA Guidelines &bull; 2026
+          <br />
+          We take no responsibility if you burn your food 🙂
         </footer>
       </div>
     </div>
